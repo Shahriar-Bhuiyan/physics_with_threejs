@@ -27,7 +27,7 @@ debugObject.createBox = () => {
   });
 };
 
-gui.add(debugObject,"createBox")
+gui.add(debugObject, "createBox");
 /**
  * Base
  */
@@ -36,6 +36,30 @@ const canvas = document.querySelector("canvas.webgl");
 
 // Scene
 const scene = new THREE.Scene();
+
+// Sound
+
+const hitSound = new Audio("/sounds/hit.mp3");
+
+const plalyHitSounnd = (collision) => {
+  
+  const impactStrength = collision.contact.getImpactVelocityAlongNormal();
+  
+  const { body } = collision;
+  if (impactStrength > 1.5) {
+    const sound = hitSound.cloneNode();
+    const collisionPoint = body.position;
+    
+      const distance = camera.position.distanceTo(
+        new THREE.Vector3(collisionPoint.x, collisionPoint.y, collisionPoint.z)
+      );
+      
+    const volume = Math.min(impactStrength / (distance * 2), 1);
+    sound.volume = Math.max(Math.min(volume, 1), 0.05);
+     sound.currentTime = 0;
+     sound.play();
+  }
+};
 
 /**
  * Textures
@@ -55,6 +79,8 @@ const environmentMapTexture = cubeTextureLoader.load([
 // Physisc
 
 const world = new CANNON.World();
+world.broadphase = new CANNON.SAPBroadphase(world);
+world.allowSleep = true;
 world.gravity.set(0, -9.82, 0);
 
 // Material
@@ -201,7 +227,7 @@ const createSphere = (radius, position) => {
   });
 };
 
-createSphere(0.5, { x: 5, y: 3, z: 0 });
+createSphere(0.5, { x: 3, y: 3, z: 0 });
 
 const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
 const boxMaterial = new THREE.MeshStandardMaterial({
@@ -234,7 +260,7 @@ const createBox = (width, height, depth, position) => {
   });
 
   body.position.copy(position);
-
+  body.addEventListener("collide", plalyHitSounnd);
   world.addBody(body);
 
   objectsToUpdate.push({
@@ -263,7 +289,8 @@ const tick = () => {
 
   for (const object of objectsToUpdate) {
     object.mesh.position.copy(object.body.position);
-    console.log(objectsToUpdate[object]);
+
+    object.mesh.quaternion.copy(object.body.quaternion);
   }
 
   // Update controls
